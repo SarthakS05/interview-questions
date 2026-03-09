@@ -1,0 +1,250 @@
+/* styles/calculator.css */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap');
+
+:root {
+  --bg:        #0a0a0f;
+  --surface:   #111118;
+  --border:    #1e1e2e;
+  --display:   #0d0d14;
+  --text:      #e8e8f0;
+  --muted:     #5a5a72;
+  --accent:    #7c6af7;
+  --accent-hi: #a89ff9;
+  --eq:        #f7c26a;
+  --eq-hi:     #ffd98a;
+  --danger:    #f76a6a;
+  --op:        #2a2a3e;
+  --op-hi:     #353550;
+  --num:       #16161f;
+  --num-hi:    #1e1e2a;
+  --glow:      rgba(124, 106, 247, 0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 10%, rgba(124,106,247,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 35% at 80% 90%, rgba(247,194,106,0.05) 0%, transparent 70%),
+    var(--bg);
+}
+
+.wordmark {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2.5rem;
+}
+
+.wordmark span {
+  color: var(--accent-hi);
+}
+
+/* ── Calculator shell ───────────────────────────────────────────── */
+.calc {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.03) inset,
+    0 30px 80px rgba(0,0,0,0.6),
+    0 0 60px var(--glow);
+}
+
+/* ── Display ─────────────────────────────────────────────────────── */
+.display {
+  background: var(--display);
+  padding: 1.4rem 1.6rem 1rem;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.display-history {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: right;
+  min-height: 1.2em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.display-expr {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.25rem;
+  color: var(--text);
+  text-align: right;
+  min-height: 1.8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.display-result {
+  font-family: 'DM Mono', monospace;
+  font-size: 2.4rem;
+  font-weight: 300;
+  color: var(--accent-hi);
+  text-align: right;
+  line-height: 1;
+  min-height: 1em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.display-result.muted { opacity: 0.35; }
+.display-result.error { color: var(--danger); font-size: 1rem; }
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 70px;
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: background 0.1s, transform 0.08s, color 0.1s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active { transform: scale(0.93); }
+
+/* Number keys */
+.btn-num {
+  background: var(--num);
+  color: var(--text);
+}
+.btn-num:hover { background: var(--num-hi); }
+
+/* Operator keys */
+.btn-op {
+  background: var(--op);
+  color: var(--accent-hi);
+}
+.btn-op:hover { background: var(--op-hi); }
+
+/* Utility keys (AC, ±, %) */
+.btn-util {
+  background: var(--op);
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.btn-util:hover { background: var(--op-hi); color: var(--text); }
+
+/* Equals */
+.btn-eq {
+  background: var(--eq);
+  color: #1a1200;
+}
+.btn-eq:hover { background: var(--eq-hi); }
+
+/* Wide (zero key) */
+.btn-wide {
+  grid-column: span 2;
+  justify-content: flex-start;
+  padding-left: 1.6rem;
+}
+
+/* Power button is slightly different */
+.btn-pow { font-size: 0.85rem; }
+
+/* ── Loading indicator ───────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(124,106,247,0.3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── History panel ───────────────────────────────────────────────── */
+.history {
+  margin-top: 2rem;
+  width: 100%;
+  max-width: 360px;
+}
+
+.history-title {
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.55rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.history-item:hover { border-color: var(--accent); }
+
+.history-expr {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.history-res {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--accent-hi);
+}

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nucleus Calc — Standalone</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #111118;
+      --border:    #1e1e2e;
+      --display:   #0d0d14;
+      --text:      #e8e8f0;
+      --muted:     #5a5a72;
+      --accent:    #7c6af7;
+      --accent-hi: #a89ff9;
+      --eq:        #f7c26a;
+      --eq-hi:     #ffd98a;
+      --danger:    #f76a6a;
+      --op:        #2a2a3e;
+      --op-hi:     #353550;
+      --num:       #16161f;
+      --num-hi:    #1e1e2a;
+      --glow:      rgba(124,106,247,0.15);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      background:
+        radial-gradient(ellipse 60% 40% at 30% 10%, rgba(124,106,247,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 35% at 80% 90%, rgba(247,194,106,0.05) 0%, transparent 70%),
+        var(--bg);
+    }
+
+    .wordmark {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 2.5rem;
+    }
+    .wordmark span { color: var(--accent-hi); }
+
+    /* ── Calc shell ── */
+    .calc {
+      width: 100%;
+      max-width: 360px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03) inset,
+        0 30px 80px rgba(0,0,0,0.6),
+        0 0 60px var(--glow);
+    }
+
+    /* ── Display ── */
+    .display {
+      background: var(--display);
+      padding: 1.4rem 1.6rem 1rem;
+      min-height: 130px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .display-history {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: right;
+      min-height: 1.2em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .display-expr {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.25rem;
+      color: var(--text);
+      text-align: right;
+      min-height: 1.8em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .display-result {
+      font-family: 'DM Mono', monospace;
+      font-size: 2.4rem;
+      font-weight: 300;
+      color: var(--accent-hi);
+      text-align: right;
+      line-height: 1;
+      min-height: 1em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .display-result.muted { opacity: 0.35; }
+    .display-result.error { color: var(--danger); font-size: 1rem; }
+
+    /* ── Buttons ── */
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 70px;
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: background 0.1s, transform 0.08s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.93); }
+
+    .btn-num  { background: var(--num);  color: var(--text); }
+    .btn-num:hover { background: var(--num-hi); }
+
+    .btn-op   { background: var(--op);   color: var(--accent-hi); }
+    .btn-op:hover { background: var(--op-hi); }
+
+    .btn-util { background: var(--op);   color: var(--muted); font-size: 0.95rem; }
+    .btn-util:hover { background: var(--op-hi); color: var(--text); }
+
+    .btn-eq   { background: var(--eq);   color: #1a1200; }
+    .btn-eq:hover { background: var(--eq-hi); }
+
+    .btn-wide { grid-column: span 2; justify-content: flex-start; padding-left: 1.6rem; }
+
+    /* ── History ── */
+    #history-wrap {
+      margin-top: 2rem;
+      width: 100%;
+      max-width: 360px;
+      display: none;
+    }
+    .history-title {
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    #history-list { display: flex; flex-direction: column; gap: 0.4rem; }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0.55rem 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .history-item:hover { border-color: var(--accent); }
+    .history-expr { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--muted); }
+    .history-res  { font-family: 'DM Mono', monospace; font-size: 0.9rem;  color: var(--accent-hi); }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <p class="wordmark">NUCLEUS <span>CALC</span></p>
+
+    <div class="calc">
+      <div class="display">
+        <div class="display-history" id="hist-expr"></div>
+        <div class="display-expr"    id="d-expr">0</div>
+        <div class="display-result muted" id="d-result">—</div>
+      </div>
+
+      <div class="buttons">
+        <!-- Row 1 -->
+        <button class="btn btn-util" data-action="AC">AC</button>
+        <button class="btn btn-util" data-action="±">±</button>
+        <button class="btn btn-op"   data-value="%">%</button>
+        <button class="btn btn-op"   data-value="/">÷</button>
+        <!-- Row 2 -->
+        <button class="btn btn-num"  data-value="7">7</button>
+        <button class="btn btn-num"  data-value="8">8</button>
+        <button class="btn btn-num"  data-value="9">9</button>
+        <button class="btn btn-op"   data-value="*">×</button>
+        <!-- Row 3 -->
+        <button class="btn btn-num"  data-value="4">4</button>
+        <button class="btn btn-num"  data-value="5">5</button>
+        <button class="btn btn-num"  data-value="6">6</button>
+        <button class="btn btn-op"   data-value="-">−</button>
+        <!-- Row 4 -->
+        <button class="btn btn-num"  data-value="1">1</button>
+        <button class="btn btn-num"  data-value="2">2</button>
+        <button class="btn btn-num"  data-value="3">3</button>
+        <button class="btn btn-op"   data-value="+">+</button>
+        <!-- Row 5 -->
+        <button class="btn btn-num btn-wide" data-value="0">0</button>
+        <button class="btn btn-num"  data-value=".">.</button>
+        <button class="btn btn-eq"   data-action="=">=</button>
+      </div>
+    </div>
+
+    <div id="history-wrap">
+      <p class="history-title">History</p>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── Safe recursive-descent evaluator (no eval) ──────────────────────────
+
+    function tokenise(expr) {
+      const tokens = [];
+      let i = 0;
+      while (i < expr.length) {
+        const ch = expr[i];
+        if (/\s/.test(ch)) { i++; continue; }
+        if (/[0-9.]/.test(ch)) {
+          let num = "";
+          while (i < expr.length && /[0-9.]/.test(expr[i])) num += expr[i++];
+          tokens.push({ type: "NUM", value: parseFloat(num) });
+          continue;
+        }
+        if ("+-*/%^".includes(ch)) { tokens.push({ type: "OP", value: ch }); i++; continue; }
+        if (ch === "(") { tokens.push({ type: "LPAREN" }); i++; continue; }
+        if (ch === ")") { tokens.push({ type: "RPAREN" }); i++; continue; }
+        throw new Error("Unexpected character: " + ch);
+      }
+      return tokens;
+    }
+
+    function Parser(tokens) {
+      let pos = 0;
+      const peek = () => tokens[pos];
+      const consume = () => tokens[pos++];
+
+      function expr() {
+        let left = term();
+        while (peek()?.type === "OP" && "+-".includes(peek().value)) {
+          const op = consume().value;
+          const right = term();
+          left = op === "+" ? left + right : left - right;
+        }
+        return left;
+      }
+
+      function term() {
+        let left = factor();
+        while (peek()?.type === "OP" && "*/%".includes(peek().value)) {
+          const op = consume().value;
+          const right = factor();
+          if (op === "*") left = left * right;
+          else if (op === "/") { if (right === 0) throw new Error("Division by zero"); left = left / right; }
+          else left = left % right;
+        }
+        return left;
+      }
+
+      function factor() {
+        const b = base();
+        if (peek()?.type === "OP" && peek().value === "^") {
+          consume(); return Math.pow(b, factor());
+        }
+        return b;
+      }
+
+      function base() {
+        const tok = peek();
+        if (!tok) throw new Error("Unexpected end");
+        if (tok.type === "NUM") { consume(); return tok.value; }
+        if (tok.type === "LPAREN") {
+          consume();
+          const val = expr();
+          if (peek()?.type !== "RPAREN") throw new Error("Missing )");
+          consume(); return val;
+        }
+        if (tok.type === "OP" && tok.value === "-") { consume(); return -base(); }
+        throw new Error("Unexpected token");
+      }
+
+      return { parse() { const v = expr(); if (peek()) throw new Error("Unexpected token"); return v; } };
+    }
+
+    function evaluate(expression) {
+      return Parser(tokenise(expression)).parse();
+    }
+
+    function formatNum(n) {
+      if (!isFinite(n)) return String(n);
+      if (Math.abs(n) > 1e15 || (Math.abs(n) < 1e-8 && n !== 0))
+        return n.toExponential(6).replace(/\.?0+e/, "e");
+      return String(parseFloat(n.toPrecision(12)));
+    }
+
+    // ── State ────────────────────────────────────────────────────────────────
+
+    let expr      = "";
+    let committed = false;
+    const historyData = [];
+
+    const dExpr    = document.getElementById("d-expr");
+    const dResult  = document.getElementById("d-result");
+    const histExpr = document.getElementById("hist-expr");
+    const histWrap = document.getElementById("history-wrap");
+    const histList = document.getElementById("history-list");
+
+    function render() {
+      dExpr.textContent = expr || "0";
+    }
+
+    function showResult(val, isErr) {
+      dResult.textContent = val;
+      dResult.className = "display-result" + (isErr ? " error" : "");
+    }
+
+    function pushHistory(e, r) {
+      historyData.unshift({ expr: e, result: r });
+      if (historyData.length > 10) historyData.pop();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      histWrap.style.display = historyData.length ? "block" : "none";
+      histList.innerHTML = "";
+      historyData.forEach(h => {
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.innerHTML = `<span class="history-expr">${h.expr}</span><span class="history-res">${h.result}</span>`;
+        item.onclick = () => { expr = h.result; committed = false; render(); showResult("—", false); histExpr.textContent = ""; };
+        histList.appendChild(item);
+      });
+    }
+
+    function doCalc() {
+      if (!expr.trim()) return;
+      try {
+        const result = evaluate(expr);
+        const formatted = formatNum(result);
+        showResult(formatted, false);
+        pushHistory(expr, formatted);
+        histExpr.textContent = expr;
+        committed = true;
+      } catch (e) {
+        showResult(e.message, true);
+        committed = false;
+      }
+    }
+
+    function handleAction(action, value) {
+      if (action === "AC") {
+        expr = ""; committed = false;
+        dResult.className = "display-result muted";
+        dResult.textContent = "—";
+        histExpr.textContent = "";
+        render(); return;
+      }
+      if (action === "±") {
+        if (expr) expr = expr.startsWith("-") ? expr.slice(1) : "-" + expr;
+        render(); return;
+      }
+      if (action === "=") { doCalc(); return; }
+
+      const isNum = /^[0-9.]$/.test(value) || value === "%";
+      const isOp  = "+-*/".includes(value);
+
+      if (committed) {
+        const curResult = dResult.textContent;
+        if (isNum) { expr = value; committed = false; showResult("—", false); histExpr.textContent = ""; }
+        else if (isOp) { expr = curResult + value; committed = false; showResult("—", false); histExpr.textContent = ""; }
+        render(); return;
+      }
+
+      expr += value;
+      render();
+    }
+
+    // ── Button bindings ──────────────────────────────────────────────────────
+    document.querySelectorAll(".btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const action = btn.dataset.action;
+        const value  = btn.dataset.value;
+        handleAction(action || null, value || null);
+      });
+    });
+
+    // ── Keyboard ─────────────────────────────────────────────────────────────
+    const keyMap = {
+      Enter: "=", "=": "=",
+      Backspace: "DEL", Escape: "AC",
+      "+": "+", "-": "-", "*": "*", "/": "/", "%": "%",
+    };
+    window.addEventListener("keydown", e => {
+      const mapped = keyMap[e.key] ?? (/^[0-9.]$/.test(e.key) ? e.key : null);
+      if (!mapped) return;
+      if (mapped === "DEL") { expr = expr.slice(0, -1); committed = false; render(); return; }
+      if (mapped === "AC")  { handleAction("AC", null); return; }
+      if (mapped === "=")   { handleAction("=",  null); return; }
+      handleAction(null, mapped);
+    });
+  </script>
+</body>
+</html>
