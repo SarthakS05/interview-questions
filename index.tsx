@@ -1,7 +1,6 @@
 // pages/index.tsx
 import { useState, useCallback, useEffect } from "react";
 import Head from "next/head";
-import "../styles/calculator.css";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
